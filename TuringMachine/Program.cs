@@ -29,7 +29,7 @@ namespace TuringMachine
 
         private void Run()
         {
-            state.currentState = instructions.Keys.ElementAt(0).initialState;
+            state.currentState = instructions.Keys.ElementAt(0).initialState; // start point
 
             while (!head.success)
             {
@@ -39,7 +39,7 @@ namespace TuringMachine
 
         private async Task RunAsync()
         {
-            state.currentState = instructions.Keys.ElementAt(0).initialState;    
+            state.currentState = instructions.Keys.ElementAt(0).initialState; // start point
 
             Task.Run(() =>
             {
@@ -78,6 +78,7 @@ namespace TuringMachine
             // Increasing string if the it's out of range
             CheckForIncreaseString();
 
+            // Displaying all main info - whole tape, current state position and steps
             Display();
         }
 
@@ -102,6 +103,7 @@ namespace TuringMachine
             string[] files = line.Split(' ');
             Console.WriteLine("Write asynchronously? (Y/N)");
 
+            // Creating object corresponding each file (amount of obj. = amoung of files)
             foreach (var file in files)
             {
                 obj = new TuringMachine();
@@ -110,6 +112,7 @@ namespace TuringMachine
                 eachFileObj.Add(obj);
             }
 
+            // Async or Not? - from user
             if (char.TryParse(Console.ReadLine(), out char checkAsync))
             {
                 switch (checkAsync)
@@ -142,12 +145,12 @@ namespace TuringMachine
 
             if (fi.Exists)
             {
-                Regex parts = new Regex(@"\w . . . \w");
+                Regex parts = new Regex(@"\w . . . \w"); // Pattern
 
                 using (StreamReader sr = fi.OpenText())
                 {
                     tape.Input(sr.ReadLine()); // tapeString initializing
-                    sr.ReadLine();
+                    sr.ReadLine(); // Skiping one line
                     head.currentPosition = Int32.Parse(sr.ReadLine()) - 1; // head start point initializing
 
                     string s = "";
@@ -158,7 +161,7 @@ namespace TuringMachine
                         if (match.Success)
                         {
                             parameters = s.Split(' ');
-                            this.instructions.Add((parameters[0], char.Parse(parameters[1])), 
+                            this.instructions.Add((parameters[0], char.Parse(parameters[1])),  // Initializing instructions
                                 (char.Parse(parameters[2]), char.Parse(parameters[3]), parameters[4]));
                         }
                     }
@@ -178,7 +181,7 @@ namespace TuringMachine
             Console.WriteLine("step: " + state.steps);
             Console.WriteLine();
 
-            if (head.success)
+            if (head.success) // Outputs only at the end
             {
                 Console.WriteLine("\n--- SUCCESS ---\n");
             }
