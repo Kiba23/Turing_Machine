@@ -1,9 +1,12 @@
-﻿
+﻿using System.Diagnostics;
+
 namespace TuringMachine
 {
     public class State
     {
         public string currentState { get; set; }
-        //public string nextState { get; set; }
+
+        // Additional variable:
+        public int steps = 0;
     }
 }

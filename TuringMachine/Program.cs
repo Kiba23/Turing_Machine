@@ -1,77 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace TuringMachine
 {
     class TuringMachine
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            var first = new TuringMachine();
+            var program = new TuringMachine();
 
-            first.Instructions(
-            ("0", ' ', ' ', 'R', "1"),
-            ("0", '*', '*', 'R', "0"),
-            ("1", ' ', ' ', 'L', "2"),
-            ("1", '*', '*', 'R', "1"),
-            ("2", '0', ' ', 'L', "3x"),
-            ("2", '1', ' ', 'L', "3y"),
-            ("2", ' ', ' ', 'L', "7"),
-            ("3x", ' ', ' ', 'L', "4x"),
-            ("3x", '*', '*', 'L', "3x"),
-            ("3y", ' ', ' ', 'L', "4y"),
-            ("3y", '*', '*', 'L', "3y"),
-            ("4x", '0', 'x', 'R', "0"),
-            ("4x", '1', 'y', 'R', "0"),
-            ("4x", ' ', 'x', 'R', "0"),
-            ("4x", '*', '*', 'L', "4x"),
-            ("4y", '0', '1', '*', "5"),
-            ("4y", '1', '0', 'L', "4y"),
-            ("4y", ' ', '1', '*', "5"),
-            ("4y", '*', '*', 'L', "4y"),
-            ("5", 'x', 'x', 'L', "6"),
-            ("5", 'y', 'y', 'L', "6"),
-            ("5", ' ', ' ', 'L', "6"),
-            ("5", '*', '*', 'R', "5"),
-            ("6", '0', 'x', 'R', "0"),
-            ("6", '1', 'y', 'R', "0"),
-            ("7", 'x', '0', 'L', "7"),
-            ("7", 'y', '1', 'L', "7"),
-            ("7", ' ', ' ', 'R', "halt"),
-            ("7", '*', '*', 'L', "7")
-                )
-                .Input("110110 101011");
-
-            first.Run();
-
-            Console.WriteLine("\n--- SUCCESS ---\n");
+            await program.Menu();
+            
             Console.ReadLine();
         }
 
         private Tape tape = new Tape();
         private State state = new State();
         private Head head = new Head();
-        private Dictionary<(string initialState, char read), (char write, char move, string toState)> instructions;
-        private int steps = 0;
+        private TuringMachine obj;
+        private List<TuringMachine> eachFileObj = new List<TuringMachine>();
+        private Dictionary<(string initialState, char read), (char write, char move, string toState)> instructions 
+            = new Dictionary<(string initialState, char read), (char write, char move, string toState)>();
+        private string file;
 
-        public TuringMachine Instructions(
-            params (string initialState, char read, char write, char move, string toState)[] instructions)
+        private void Run()
         {
-            this.instructions = instructions.ToDictionary(i => (i.initialState, i.read),
-                                                                i => (i.write, i.move, i.toState));
-            return this;
-        }
-
-        public TuringMachine Input(string input)
-        {
-            tape.Input(input);
-            return this;
-        }
-
-        public void Run()
-        {
-            head.currentPosition = 0;
             state.currentState = instructions.Keys.ElementAt(0).initialState;
 
             while (!head.success)
@@ -80,7 +37,17 @@ namespace TuringMachine
             }
         }
 
-        public void Step()
+        private async Task RunAsync()
+        {
+            state.currentState = instructions.Keys.ElementAt(0).initialState;    
+
+            Task.Run(() =>
+            {
+                while (!head.success) { Step(); }
+            });
+        }
+
+        private void Step()
         {
             // Main logic for overriding current character
             if (instructions.TryGetValue((state.currentState, tape.tapeString[head.currentPosition]), out var values))
@@ -88,7 +55,7 @@ namespace TuringMachine
                 tape.tapeString[head.currentPosition] = values.write;
                 head.MoveNext(values.move);
                 state.currentState = values.toState;
-                steps++;
+                state.steps++;
                 head.IfSuccess(state.currentState);
             }
             else
@@ -98,7 +65,7 @@ namespace TuringMachine
                 {
                     head.MoveNext(starValues.move);
                     state.currentState = starValues.toState;
-                    steps++;
+                    state.steps++;
                     head.IfSuccess(state.currentState);
                 }
                 // If nothing is matched Exception would be thrown
@@ -114,7 +81,7 @@ namespace TuringMachine
             Display();
         }
 
-        public void CheckForIncreaseString()
+        private void CheckForIncreaseString()
         {
             if (tape.tapeString.Count <= head.currentPosition)
             {
@@ -127,12 +94,94 @@ namespace TuringMachine
             }
         }
 
-        public void Display()
+        private async Task Menu()
         {
+            Console.WriteLine("--- MENU --- \n\n");
+            Console.Write("Enter the name of files: ");
+            string line = Console.ReadLine();
+            string[] files = line.Split(' ');
+            Console.WriteLine("Write asynchronously? (Y/N)");
+
+            foreach (var file in files)
+            {
+                obj = new TuringMachine();
+                obj.file = file;
+                obj.ParseFile();
+                eachFileObj.Add(obj);
+            }
+
+            if (char.TryParse(Console.ReadLine(), out char checkAsync))
+            {
+                switch (checkAsync)
+                {
+                    case 'Y':
+                        foreach (var obj in eachFileObj)
+                        {
+                            await obj.RunAsync();
+                        }
+                        break;
+                    case 'N':
+                        foreach (var obj in eachFileObj)
+                        {
+                            obj.Run();
+                        }
+                        break;
+                    default:
+                        throw new Exception("Wrong letter");
+                }
+            }
+            else
+            {
+                throw new InvalidCastException("Wrong input!");
+            }
+        }
+
+        private void ParseFile()
+        {
+            FileInfo fi = new FileInfo(this.file);
+
+            if (fi.Exists)
+            {
+                Regex parts = new Regex(@"\w . . . \w");
+
+                using (StreamReader sr = fi.OpenText())
+                {
+                    tape.Input(sr.ReadLine()); // tapeString initializing
+                    sr.ReadLine();
+                    head.currentPosition = Int32.Parse(sr.ReadLine()) - 1; // head start point initializing
+
+                    string s = "";
+                    string[] parameters;
+                    while ((s = sr.ReadLine()) != null)
+                    {
+                        Match match = parts.Match(s);
+                        if (match.Success)
+                        {
+                            parameters = s.Split(' ');
+                            this.instructions.Add((parameters[0], char.Parse(parameters[1])), 
+                                (char.Parse(parameters[2]), char.Parse(parameters[3]), parameters[4]));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                throw new FileNotFoundException("File not found");
+            }
+        }
+
+        private void Display()
+        {
+            Console.WriteLine();
             Console.WriteLine(tape.PrintTapeString());
             Console.WriteLine(head.OutputHeadPosition());
-            Console.WriteLine("step: " + steps);
+            Console.WriteLine("step: " + state.steps);
             Console.WriteLine();
+
+            if (head.success)
+            {
+                Console.WriteLine("\n--- SUCCESS ---\n");
+            }
         }
     }
 }

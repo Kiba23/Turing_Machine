@@ -1,4 +1,5 @@
-﻿
+﻿using System;
+
 namespace TuringMachine
 {
     public class Head
@@ -24,7 +25,7 @@ namespace TuringMachine
 
         public void IfSuccess(string currentState)
         {
-            if (currentState == "halt")
+            if (currentState == "H")
             {
                 success = true;
             }
