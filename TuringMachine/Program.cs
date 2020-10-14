@@ -178,7 +178,7 @@ namespace TuringMachine
             Console.WriteLine();
             Console.WriteLine(tape.PrintTapeString());
             Console.WriteLine(head.OutputHeadPosition());
-            Console.WriteLine("step: " + state.steps);
+            Console.WriteLine($"File - {this.file}; Step - {state.steps}");
             Console.WriteLine();
 
             if (head.success) // Outputs only at the end
